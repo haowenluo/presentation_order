@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Order Randomizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f1e;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            animation: float 20s infinite ease-in-out;
+            opacity: 0.3;
+        }
+
+        .bg-circle:nth-child(1) {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            top: -200px;
+            left: -200px;
+            animation-delay: 0s;
+        }
+
+        .bg-circle:nth-child(2) {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            bottom: -250px;
+            right: -250px;
+            animation-delay: -7s;
+        }
+
+        .bg-circle:nth-child(3) {
+            width: 350px;
+            height: 350px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            top: 50%;
+            left: 50%;
+            animation-delay: -14s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(100px, -100px) scale(1.1); }
+            66% { transform: translate(-100px, 100px) scale(0.9); }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 40px rgba(102, 126, 234, 0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 50px;
+            animation: containerPulse 3s ease-in-out infinite;
+            position: relative;
+            z-index: 10;
+        }
+
+        @keyframes containerPulse {
+            0%, 100% { 
+                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 40px rgba(102, 126, 234, 0.3);
+            }
+            50% { 
+                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 60px rgba(245, 87, 108, 0.5);
+            }
+        }
+
+        h1 {
+            background: linear-gradient(135deg, #667eea 0%, #f5576c 50%, #4facfe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 3em;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            animation: titleGlow 2s ease-in-out infinite;
+            text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #a0aec0;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .upload-section {
+            border: 3px dashed rgba(102, 126, 234, 0.5);
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            animation: uploadShine 3s infinite;
+        }
+
+        @keyframes uploadShine {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .upload-section:hover {
+            border-color: #f5576c;
+            background: rgba(245, 87, 108, 0.1);
+            transform: scale(1.03);
+            box-shadow: 0 0 40px rgba(245, 87, 108, 0.4);
+        }
+
+        .upload-section.dragover {
+            background: rgba(79, 172, 254, 0.15);
+            border-color: #4facfe;
+            box-shadow: 0 0 50px rgba(79, 172, 254, 0.6);
+            transform: scale(1.05);
+        }
+
+        .upload-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .upload-section h2 {
+            color: #fff;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-section p {
+            color: #a0aec0;
+            position: relative;
+            z-index: 1;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px 45px;
+            border-radius: 50px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 25px rgba(102, 126, 234, 0.5);
+            font-weight: 700;
+            margin: 10px;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.8), 0 0 30px rgba(245, 87, 108, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .btn:disabled {
+            background: rgba(160, 174, 192, 0.3);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn:disabled::before {
+            display: none;
+        }
+
+        .results-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .presentation-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            animation: cardSlideIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+            transition: all 0.4s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .presentation-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .presentation-card:hover::before {
+            left: 100%;
+        }
+
+        .presentation-card:hover {
+            transform: translateX(15px) scale(1.03);
+            box-shadow: 0 15px 50px rgba(102, 126, 234, 0.6), 0 0 30px rgba(245, 87, 108, 0.4);
+        }
+
+        /* Rainbow gradient for each card */
+        .presentation-card:nth-child(6n+1) {
+            background: linear-gradient(135deg, rgba(255, 78, 80, 0.8), rgba(249, 212, 35, 0.8));
+        }
+        .presentation-card:nth-child(6n+2) {
+            background: linear-gradient(135deg, rgba(249, 212, 35, 0.8), rgba(64, 224, 208, 0.8));
+        }
+        .presentation-card:nth-child(6n+3) {
+            background: linear-gradient(135deg, rgba(64, 224, 208, 0.8), rgba(52, 152, 219, 0.8));
+        }
+        .presentation-card:nth-child(6n+4) {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.8), rgba(155, 89, 182, 0.8));
+        }
+        .presentation-card:nth-child(6n+5) {
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.8), rgba(255, 107, 107, 0.8));
+        }
+        .presentation-card:nth-child(6n+6) {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.8), rgba(255, 78, 80, 0.8));
+        }
+
+        @keyframes cardSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-100px) rotateY(-90deg);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) rotateY(0);
+            }
+        }
+
+        .order-number {
+            background: rgba(255, 255, 255, 0.95);
+            background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+            color: #667eea;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2em;
+            font-weight: 900;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3), inset 0 2px 5px rgba(255, 255, 255, 0.5);
+            position: relative;
+            animation: numberPulse 2s infinite;
+        }
+
+        @keyframes numberPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .order-number::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            animation: ringExpand 2s infinite;
+        }
+
+        @keyframes ringExpand {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        .student-name {
+            flex: 1;
+            margin-left: 30px;
+            font-size: 1.6em;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
+        }
+
+        .trophy-icon {
+            font-size: 2.5em;
+            margin-left: 20px;
+            animation: rotate 3s infinite linear;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .presentation-card:first-child .trophy-icon {
+            animation: bounce 1s infinite, rotate 3s infinite linear;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 15px;
+            height: 15px;
+            position: absolute;
+            animation: confetti-fall 3s linear forwards;
+            z-index: 1000;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .firework {
+            position: fixed;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            animation: firework 1s ease-out forwards;
+            z-index: 1000;
+        }
+
+        @keyframes firework {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--x), var(--y));
+                opacity: 0;
+            }
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            font-weight: 600;
+            font-size: 1.1em;
+            animation: slideDown 0.5s ease-out;
+            letter-spacing: 1px;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-success {
+            background: rgba(72, 187, 120, 0.2);
+            color: #48bb78;
+            border: 2px solid rgba(72, 187, 120, 0.5);
+            box-shadow: 0 0 20px rgba(72, 187, 120, 0.3);
+        }
+
+        .status-error {
+            background: rgba(245, 87, 108, 0.2);
+            color: #f5576c;
+            border: 2px solid rgba(245, 87, 108, 0.5);
+            box-shadow: 0 0 20px rgba(245, 87, 108, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .shuffle-animation {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            25% { transform: translateX(-15px) rotate(-5deg); }
+            50% { transform: translateX(15px) rotate(5deg); }
+            75% { transform: translateX(-15px) rotate(-5deg); }
+        }
+
+        .results-section h2 {
+            background: linear-gradient(135deg, #667eea 0%, #f5576c 50%, #4facfe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.2em;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Sparkle effect */
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        .sparkle {
+            position: fixed;
+            width: 3px;
+            height: 3px;
+            background: white;
+            border-radius: 50%;
+            animation: sparkle 1s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation">
+        <div class="bg-circle"></div>
+        <div class="bg-circle"></div>
+        <div class="bg-circle"></div>
+    </div>
+
+    <div class="container">
+        <h1>🎲 Presentation Order Randomizer</h1>
+        <p class="subtitle">Upload your Excel file to randomly order presentations</p>
+
+        <div id="statusMessage"></div>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-icon">📁</div>
+            <h2>Drop Excel File Here</h2>
+            <p>or click to browse</p>
+            <p style="margin-top: 10px; color: #999; font-size: 0.9em;">
+                Excel should have two columns: First Name and Last Name
+            </p>
+            <input type="file" id="fileInput" accept=".xlsx, .xls">
+        </div>
+
+        <div class="button-group">
+            <button class="btn" id="randomizeBtn" disabled>🎯 Randomize Order</button>
+            <button class="btn" id="reshuffleBtn" style="display: none;">🔄 Shuffle Again</button>
+            <button class="btn" id="downloadBtn" style="display: none;">💾 Download Order</button>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">
+                📋 Presentation Order
+            </h2>
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <script>
+        let studentsData = [];
+        let currentOrder = [];
+
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInput = document.getElementById('fileInput');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const reshuffleBtn = document.getElementById('reshuffleBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsList = document.getElementById('resultsList');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // Click to upload
+        uploadSection.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    
+                    // Skip header row and process data
+                    studentsData = [];
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (row[0] || row[1]) {
+                            const firstName = row[0] || '';
+                            const lastName = row[1] || '';
+                            studentsData.push({
+                                firstName: firstName.toString().trim(),
+                                lastName: lastName.toString().trim()
+                            });
+                        }
+                    }
+
+                    if (studentsData.length === 0) {
+                        showStatus('No valid data found in Excel file. Please check your file format.', 'error');
+                        return;
+                    }
+
+                    showStatus(`✅ Successfully loaded ${studentsData.length} students!`, 'success');
+                    randomizeBtn.disabled = false;
+                } catch (error) {
+                    showStatus('❌ Error reading file. Please ensure it\'s a valid Excel file.', 'error');
+                    console.error(error);
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message status-${type}`;
+            setTimeout(() => {
+                statusMessage.textContent = '';
+                statusMessage.className = '';
+            }, 5000);
+        }
+
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function displayResults() {
+            resultsList.innerHTML = '';
+            
+            currentOrder.forEach((student, index) => {
+                const card = document.createElement('div');
+                card.className = 'presentation-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                
+                const fullName = `${student.firstName} ${student.lastName}`.trim();
+                
+                let trophyIcon = '';
+                if (index === 0) trophyIcon = '<div class="trophy-icon">🏆</div>';
+                else if (index === 1) trophyIcon = '<div class="trophy-icon">🥈</div>';
+                else if (index === 2) trophyIcon = '<div class="trophy-icon">🥉</div>';
+                
+                card.innerHTML = `
+                    <div class="order-number">${index + 1}</div>
+                    <div class="student-name">${fullName}</div>
+                    ${trophyIcon}
+                `;
+                
+                resultsList.appendChild(card);
+            });
+
+            resultsSection.classList.add('show');
+            createConfetti();
+        }
+
+        function createConfetti() {
+            const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#43e97b', '#ffd700', '#ff6b6b'];
+            const shapes = ['●', '■', '▲', '★', '♦'];
+            
+            // Confetti
+            for (let i = 0; i < 100; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * window.innerWidth + 'px';
+                    confetti.style.top = -20 + 'px';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.textContent = shapes[Math.floor(Math.random() * shapes.length)];
+                    confetti.style.fontSize = (Math.random() * 20 + 10) + 'px';
+                    confetti.style.color = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    confetti.style.animationDelay = (Math.random() * 0.5) + 's';
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 5000);
+                }, i * 20);
+            }
+
+            // Fireworks
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    createFirework();
+                }, i * 300);
+            }
+
+            // Sparkles
+            for (let i = 0; i < 30; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'sparkle';
+                    sparkle.style.left = Math.random() * window.innerWidth + 'px';
+                    sparkle.style.top = Math.random() * window.innerHeight + 'px';
+                    sparkle.style.animationDelay = Math.random() + 's';
+                    document.body.appendChild(sparkle);
+                    
+                    setTimeout(() => sparkle.remove(), 2000);
+                }, i * 50);
+            }
+        }
+
+        function createFirework() {
+            const colors = ['#667eea', '#f5576c', '#4facfe', '#ffd700', '#ff6b6b'];
+            const x = Math.random() * window.innerWidth;
+            const y = Math.random() * (window.innerHeight * 0.5);
+
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'firework';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                
+                const angle = (Math.PI * 2 * i) / 30;
+                const velocity = 50 + Math.random() * 100;
+                particle.style.setProperty('--x', Math.cos(angle) * velocity + 'px');
+                particle.style.setProperty('--y', Math.sin(angle) * velocity + 'px');
+                
+                document.body.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        randomizeBtn.addEventListener('click', () => {
+            currentOrder = shuffleArray(studentsData);
+            displayResults();
+            randomizeBtn.style.display = 'none';
+            reshuffleBtn.style.display = 'inline-block';
+            downloadBtn.style.display = 'inline-block';
+        });
+
+        reshuffleBtn.addEventListener('click', () => {
+            resultsList.classList.add('shuffle-animation');
+            setTimeout(() => {
+                currentOrder = shuffleArray(studentsData);
+                displayResults();
+                resultsList.classList.remove('shuffle-animation');
+            }, 500);
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const orderData = currentOrder.map((student, index) => ({
+                'Order': index + 1,
+                'First Name': student.firstName,
+                'Last Name': student.lastName
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(orderData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Presentation Order');
+            XLSX.writeFile(wb, 'presentation_order.xlsx');
+            
+            showStatus('✅ Order downloaded successfully!', 'success');
+        });
+    </script>
+</body>
+</html>
